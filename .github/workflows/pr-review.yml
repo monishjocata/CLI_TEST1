@@ -1,9 +1,7 @@
 name: 'Pull Request Review'
-
-  on:
-    pull_request:
-      types: [opened, synchronize]
-
-  jobs:
-    gemini-review:
-      uses: ./.github/workflows/gemini-review.yml
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  gemini-review:
+    uses: ./.github/workflows/gemini-review.yml
