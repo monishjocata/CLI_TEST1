@@ -1,73 +1,29 @@
-name: '🔎 Gemini Issue Analyzer'
+name: 'GitHub Issue Analyzer'
 
 on:
   issues:
     types: [opened, edited]
 
-concurrency:
-  group: '${{ github.workflow }}-issue-${{ github.event.issue.number }}'
-  cancel-in-progress: true
-
-defaults:
-  run:
-    shell: 'bash'
+permissions:
+  issues: write
 
 jobs:
-  analyze:
-    runs-on: 'ubuntu-latest'
-    timeout-minutes: 5
-    permissions:
-      contents: 'read'
-      issues: 'write'
+  gemini-issue-analysis:
+    runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout repository'
-        uses: 'actions/checkout@v4'
-
+      - uses: actions/checkout@v4
       - name: 'Run Gemini issue analysis'
         uses: 'google-github-actions/run-gemini-cli@v0'
-        id: 'gemini_issue_analysis'
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           ISSUE_NUMBER: '${{ github.event.issue.number }}'
-          ISSUE_TITLE: '${{ github.event.issue.title }}'
-          ISSUE_BODY: '${{ github.event.issue.body }}'
           REPOSITORY: '${{ github.repository }}'
         with:
-          gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
-          gemini_debug: '${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
-          gemini_model: '${{ vars.GEMINI_MODEL }}'
-          settings: |-
-            {
-              "telemetry": { "enabled": false },
-              "mcpServers": {
-                "github": {
-                  "command": "docker",
-                  "args": [ "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server" ],
-                  "includeTools": [ "create_issue_comment" ],
-                  "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
-                }
-              }
-            }
           prompt: |-
-            ## Role
-            You are a world-class autonomous issue analysis agent. You are tasked with analyzing a GitHub issue and providing a helpful response.
-
-            ## Primary Directive
-            Your sole purpose is to analyze the issue and post a constructive comment on the issue using the provided tools.
-
-            ## Input Data
-            - The GitHub repository is in the environment variable "${REPOSITORY}".
-            - The GitHub issue number is in the environment variable "${ISSUE_NUMBER}".
-            - The issue title is in the environment variable "${ISSUE_TITLE}".
-            - The issue body is in the environment variable "${ISSUE_BODY}".
-
-            ## Execution Workflow
-            1. **Analyze:** Ingest and analyze the issue title and body.
-            2. **Formulate Response:** Create a helpful and concise response. This could include asking for more information, suggesting a possible cause, or providing a link to relevant documentation.
-            3. **Submit Comment:** Call the `mcp__github__create_issue_comment` tool to post your response to the issue. The comment should be in a markdown block.
-
-            <COMMENT>
-            ## Gemini Analysis
-            - Your analysis and feedback here in a bulleted list.
-            </COMMENT>
+            You are a helpful AI assistant.
+            Your task is to analyze the title and body of a GitHub issue and provide a helpful comment.
+            The issue title is: "${{ github.event.issue.title }}"
+            The issue body is: "${{ github.event.issue.body }}"
+            Based on the issue, provide a constructive comment. This could be a question for clarification, a suggestion, or an answer.
+            Use the mcp__github__create_issue_comment tool to post your response.
