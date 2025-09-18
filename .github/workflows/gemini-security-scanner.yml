@@ -25,7 +25,7 @@ jobs:
       - name: AI Security Analysis
         uses: google-github-actions/run-gemini-cli@v0
         env:
-          GEMINI_API_KEY: AIzaSyBvpQzEdhqPeyyUuSayArbcZzNKo9jljys
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           prompt: |
             Perform a comprehensive security analysis of this codebase focusing on:
