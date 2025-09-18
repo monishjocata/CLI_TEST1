@@ -1,7 +1,13 @@
 name: 'Pull Request Review'
+
 on:
+  push:                
+    branches:
+      - main           
+      - dev            
   pull_request:
     types: [opened, synchronize]
+
 jobs:
   gemini-review:
     uses: ./.github/workflows/gemini-review.yml
