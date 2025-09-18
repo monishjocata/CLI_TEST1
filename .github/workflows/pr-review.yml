@@ -15,3 +15,4 @@ permissions:         # 👈 must be top-level for reusable workflows
 jobs:
   gemini-review:
     uses: ./.github/workflows/gemini-review.yml
+    secrets: inherit

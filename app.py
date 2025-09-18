@@ -1,7 +1,13 @@
 from flask import Flask, render_template, request
 import pyfiglet
+import os
+import google.generativeai as genai
+
+# Configure the Gemini API key
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 app = Flask(__name__)
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
