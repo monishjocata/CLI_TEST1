@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASCII Art Generator</title>
+</head>
+<body>
+    <h1>ASCII Art Generator</h1>
+    <form method="POST">
+        <input type="text" name="text" placeholder="Enter text" required>
+        <select name="font">
+            <option value="standard">Standard</option>
+            <option value="slant">Slant</option>
+            <option value="block">Block</option>
+        </select>
+        <button type="submit">Generate</button>
+    </form>
+    {% if ascii_art %}
+    <pre>{{ ascii_art }}</pre>
+    {% endif %}
+</body>
+</html>

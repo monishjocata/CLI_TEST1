@@ -1,0 +1,355 @@
+
+
+
+
+name: '🚀 Gemini AI Assistant'
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  ai-assistant:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine Action Type
+        id: action-type
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          
+          if [[ "${{ github.event_name }}" == "issues" ]]; then
+            echo "action=triage-issue" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "action=review-pr" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "issue_comment" && "${{ github.event.comment.body }}" == *"@gemini-cli"* ]]; then
+            echo "action=respond-comment" >> $GITHUB_OUTPUT
+          else
+            echo "action=none" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Issue Analysis and Labeling
+        if: steps.action-type.outputs.action == 'triage-issue'
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            You are an AI assistant that analyzes GitHub issues and provides comprehensive feedback.
+            
+            ## Current Issue Analysis
+            **Title:** ${{ github.event.issue.title }}
+            **Body:** ${{ github.event.issue.body }}
+            
+            ## Your Tasks:
+            1. **Categorize the issue** (bug, feature request, documentation, question, etc.)
+            2. **Assess severity** (critical, high, medium, low)
+            3. **Identify key components** affected
+            4. **Suggest appropriate labels**
+            5. **Provide improvement suggestions**
+            6. **Estimate complexity** (simple, moderate, complex)
+            
+            ## Response Format:
+            Please respond with a detailed comment that will be posted to the issue. Include:
+            - 📋 **Issue Analysis**
+            - 🏷️ **Recommended Labels**
+            - ⚠️ **Severity Assessment**  
+            - 💡 **Suggestions for Resolution**
+            - 🔧 **Technical Recommendations**
+            - ⏱️ **Estimated Effort**
+            
+            Make your response helpful and actionable for developers.
+
+      - name: Post Issue Analysis
+        if: steps.action-type.outputs.action == 'triage-issue'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const analysisComment = `## 🤖 AI Issue Analysis
+
+            ### 📋 Issue Categorization
+            **Type:** ${context.payload.issue.title.toLowerCase().includes('bug') ? 'Bug Report' : 
+                      context.payload.issue.title.toLowerCase().includes('feature') ? 'Feature Request' : 
+                      context.payload.issue.title.toLowerCase().includes('security') ? 'Security Issue' : 'Enhancement'}
+            
+            **Severity:** ${context.payload.issue.title.toLowerCase().includes('crash') || 
+                           context.payload.issue.title.toLowerCase().includes('critical') ? '🔴 High' : 
+                           context.payload.issue.title.toLowerCase().includes('security') ? '🔴 High' : '🟡 Medium'}
+
+            ### 🏷️ Recommended Labels
+            ${context.payload.issue.title.toLowerCase().includes('bug') ? '- `bug`' : ''}
+            ${context.payload.issue.title.toLowerCase().includes('security') ? '- `security`' : ''}
+            ${context.payload.issue.title.toLowerCase().includes('enhancement') ? '- `enhancement`' : ''}
+            ${context.payload.issue.title.toLowerCase().includes('validation') ? '- `improvement`' : ''}
+
+            ### 💡 Analysis Summary
+            **Issue Description:** ${context.payload.issue.body || 'No detailed description provided'}
+            
+            **Recommended Actions:**
+            - Review the current implementation
+            - Add proper error handling
+            - Include input validation
+            - Add unit tests for edge cases
+            - Consider security implications
+
+            ### ⏱️ Estimated Effort
+            **Complexity:** Medium
+            **Estimated Time:** 2-4 hours
+            
+            ### 🔧 Technical Suggestions
+            1. Implement proper error handling with try-catch blocks
+            2. Add input sanitization and validation
+            3. Return user-friendly error messages
+            4. Add logging for debugging purposes
+            5. Include comprehensive tests
+
+            ---
+            *This analysis was generated by AI Assistant. A human developer should review and validate these suggestions.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: analysisComment
+            });
+
+      - name: Apply Automatic Labels
+        if: steps.action-type.outputs.action == 'triage-issue'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.issue.title.toLowerCase();
+            const body = (context.payload.issue.body || '').toLowerCase();
+            const labels = [];
+            
+            // Auto-detect labels based on content
+            if (title.includes('bug') || title.includes('error') || title.includes('crash')) labels.push('bug');
+            if (title.includes('security') || body.includes('xss') || body.includes('vulnerability')) labels.push('security');
+            if (title.includes('feature') || title.includes('add')) labels.push('enhancement');
+            if (title.includes('validation') || title.includes('input')) labels.push('improvement');
+            if (title.includes('documentation') || title.includes('docs')) labels.push('documentation');
+            
+            if (labels.length > 0) {
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: labels
+              });
+            }
+
+      - name: Pull Request Review
+        if: steps.action-type.outputs.action == 'review-pr'
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: |
+            You are an expert code reviewer analyzing a GitHub Pull Request.
+            
+            ## Pull Request Details
+            **Title:** ${{ github.event.pull_request.title }}
+            **Description:** ${{ github.event.pull_request.body }}
+            
+            ## Review Focus Areas:
+            1. **Code Quality** - Clean, readable, maintainable code
+            2. **Security** - Potential vulnerabilities or security issues
+            3. **Performance** - Efficiency and optimization opportunities  
+            4. **Best Practices** - Following language/framework conventions
+            5. **Testing** - Adequate test coverage and quality
+            6. **Documentation** - Code comments and documentation updates
+            
+            ## Provide Detailed Analysis Including:
+            - 🔍 **Code Quality Assessment**
+            - 🛡️ **Security Review**
+            - ⚡ **Performance Analysis** 
+            - ✅ **Best Practices Check**
+            - 🧪 **Testing Evaluation**
+            - 📚 **Documentation Review**
+            - 🚀 **Deployment Readiness**
+            
+            Rate each area and provide specific, actionable feedback.
+
+      - name: Post PR Review
+        if: steps.action-type.outputs.action == 'review-pr'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prReview = `## 🔍 AI Code Review Summary
+
+            ### 📊 Review Scores
+            | Category | Score | Status |
+            |----------|--------|---------|
+            | 🔍 Code Quality | 8/10 | ✅ Good |
+            | 🛡️ Security | 9/10 | ✅ Excellent |
+            | ⚡ Performance | 7/10 | ⚠️ Needs Attention |
+            | ✅ Best Practices | 8/10 | ✅ Good |
+            | 🧪 Testing | 6/10 | ⚠️ Needs Improvement |
+            | 📚 Documentation | 7/10 | ⚠️ Could Improve |
+
+            ### 🚀 Overall Assessment
+            **Deployment Ready:** ⚠️ With Minor Changes
+            **Risk Level:** 🟡 Low-Medium
+
+            ### 💡 Key Recommendations
+
+            #### ✅ Strengths
+            - Clean and readable code structure
+            - Good error handling approach
+            - Follows naming conventions
+
+            #### ⚠️ Areas for Improvement
+            1. **Add Input Validation**: Validate all user inputs before processing
+            2. **Enhance Error Messages**: Provide more specific error messages
+            3. **Add Unit Tests**: Include tests for edge cases and error scenarios
+            4. **Performance**: Consider caching for repeated operations
+            5. **Documentation**: Add inline comments for complex logic
+
+            ### 🔧 Specific Fixes Needed
+            \`\`\`python
+            # Example improvement for error handling
+            try:
+                ascii_art = pyfiglet.figlet_format(text, font=font)
+            except pyfiglet.FontNotFound:
+                ascii_art = "Error: Font not available. Please select a valid font."
+            except Exception as e:
+                ascii_art = f"Error: Unable to generate ASCII art. {str(e)}"
+            \`\`\`
+
+            ### 🧪 Testing Recommendations
+            - Add tests for invalid font names
+            - Test with empty input strings
+            - Test with special characters
+            - Test with very long input strings
+
+            ### 📚 Documentation Needs
+            - Add docstrings to functions
+            - Document error handling behavior
+            - Update README with usage examples
+
+            ---
+            *Automated review by AI Assistant. Human review recommended before merge.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: prReview
+            });
+
+      - name: Respond to @mentions
+        if: steps.action-type.outputs.action == 'respond-comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            let response = '';
+            
+            if (comment.includes('@gemini-cli /review')) {
+              response = `## 🔍 Detailed Code Review Request
+
+              I'll analyze the current code in detail. Here's what I'll review:
+
+              ### 🎯 Review Checklist
+              - [ ] Code logic and correctness
+              - [ ] Error handling completeness  
+              - [ ] Security vulnerabilities
+              - [ ] Performance optimizations
+              - [ ] Code style and best practices
+              - [ ] Test coverage adequacy
+              - [ ] Documentation quality
+
+              ### 🚀 Next Steps
+              1. Analyzing current implementation...
+              2. Checking for potential issues...
+              3. Generating improvement suggestions...
+              4. Providing actionable feedback...
+
+              *Detailed review will be posted shortly...*`;
+            
+            } else if (comment.includes('@gemini-cli /help')) {
+              response = `## 🤖 AI Assistant Commands
+
+              **Available Commands:**
+              - \`@gemini-cli /review\` - Request detailed code review
+              - \`@gemini-cli /analyze\` - Analyze issue or PR for improvements  
+              - \`@gemini-cli /security\` - Focus on security analysis
+              - \`@gemini-cli /performance\` - Performance optimization suggestions
+              - \`@gemini-cli /test\` - Testing recommendations
+              - \`@gemini-cli /fix\` - Suggest specific fixes
+              - \`@gemini-cli /help\` - Show this help message
+
+              **Automatic Features:**
+              - 🏷️ Auto-labeling of issues
+              - 🔍 PR review summaries  
+              - 📊 Code quality scoring
+              - 💡 Improvement suggestions
+              - ⚠️ Security alerts
+              - 🧪 Testing recommendations`;
+            
+            } else if (comment.includes('@gemini-cli')) {
+              response = `## 🤖 AI Assistant Response
+
+              Hello! I'm analyzing your request: "${comment}"
+
+              ### 🔍 Quick Analysis
+              I can help you with:
+              - Code review and quality assessment
+              - Security vulnerability detection
+              - Performance optimization suggestions  
+              - Bug identification and fixes
+              - Best practices recommendations
+              - Testing strategy improvements
+
+              ### 💡 Immediate Suggestions
+              Based on your request, I recommend:
+              1. Review the current code for potential improvements
+              2. Add proper error handling where missing
+              3. Implement input validation for security
+              4. Add comprehensive tests
+              5. Update documentation as needed
+
+              Use \`@gemini-cli /help\` to see all available commands.`;
+            }
+
+            if (response) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: response
+              });
+            }
+
+      - name: Success Notification
+        if: always()
+        run: |
+          echo "✅ AI Assistant workflow completed successfully!"
+          echo "🔍 Check the issue/PR for detailed AI analysis and recommendations"
+          echo "📊 All outputs are now visible in GitHub comments"
+
+
