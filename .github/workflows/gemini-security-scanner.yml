@@ -1,4 +1,4 @@
-name: '🔒 Security Scanner'
+name: 'Security Scanner'
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
   push:
     branches: [main, master, develop]
   schedule:
-    - cron: '0 2 * * 1'  # Weekly security scan
+    - cron: '0 2 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -23,176 +23,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: AI Security Analysis
-        uses: google-github-actions/run-gemini-cli@v0
-        id: security-scan
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: google-github-actions/run-gemini-cli@v1
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
-            You are a cybersecurity expert analyzing code for vulnerabilities.
+            Perform a comprehensive security analysis of this codebase focusing on:
             
-            ## Security Analysis Tasks:
-            1. **Input Validation Vulnerabilities**
-            2. **SQL/NoSQL Injection Risks**  
-            3. **XSS (Cross-Site Scripting) Vulnerabilities**
-            4. **Authentication & Authorization Issues**
-            5. **Data Exposure Risks**
-            6. **Dependency Vulnerabilities**
-            7. **Configuration Security**
-            8. **API Security Issues**
+            1. Input validation vulnerabilities
+            2. SQL/NoSQL injection risks
+            3. XSS (Cross-Site Scripting) vulnerabilities
+            4. Authentication & authorization issues
+            5. Data exposure risks
+            6. Dependency vulnerabilities
+            7. Configuration security
+            8. API security issues
             
-            ## Current Repository Analysis
-            Please scan the codebase and provide:
-            - 🚨 Critical vulnerabilities (immediate attention required)
-            - ⚠️ Medium risk issues (should be addressed)
-            - 📋 Best practice recommendations
-            - 🛡️ Security hardening suggestions
+            Provide:
+            - Critical vulnerabilities requiring immediate attention
+            - Medium risk issues that should be addressed
+            - Best practice recommendations
+            - Security hardening suggestions
+            - Specific code examples for fixes
             
-            Focus on practical, actionable security improvements.
-
-      - name: Generate Security Report
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const securityReport = `## 🔒 AI Security Analysis Report
-            
-            ### 📊 Security Assessment Summary
-            | Risk Level | Issues Found | Status |
-            |------------|--------------|---------|
-            | 🚨 Critical | 1 | ⚠️ Action Required |
-            | ⚠️ High | 2 | 📋 Review Needed |
-            | 🟡 Medium | 3 | 💡 Consider Fixing |
-            | 🟢 Low | 5 | 📝 Future Enhancement |
-            
-            ### 🚨 Critical Security Issues
-            
-            #### 1. Input Validation Missing
-            **File:** \`app.py\`
-            **Line:** 12-15
-            **Risk:** XSS, Code Injection
-            **Impact:** High - User input processed without sanitization
-            
-            **Fix:**
-            \`\`\`python
-            from html import escape
-            import re
-            
-            def sanitize_input(text):
-                # Remove potentially dangerous characters
-                text = re.sub(r'[<>"\']', '', text)
-                # Limit length
-                text = text[:100]
-                # Escape HTML
-                return escape(text)
-            
-            text = sanitize_input(request.form['text'])
-            \`\`\`
-            
-            #### 2. Error Information Disclosure
-            **File:** \`app.py\`
-            **Risk:** Information Disclosure
-            **Impact:** Medium - Stack traces exposed to users
-            
-            **Fix:**
-            \`\`\`python
-            try:
-                ascii_art = pyfiglet.figlet_format(text, font=font)
-            except Exception as e:
-                # Log the actual error for debugging
-                app.logger.error(f"ASCII generation failed: {str(e)}")
-                # Return generic error to user
-                ascii_art = "An error occurred. Please try again."
-            \`\`\`
-            
-            ### ⚠️ High Priority Recommendations
-            
-            1. **Implement Content Security Policy (CSP)**
-               \`\`\`html
-               <meta http-equiv="Content-Security-Policy" 
-                     content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
-               \`\`\`
-            
-            2. **Add Rate Limiting**
-               \`\`\`python
-               from flask_limiter import Limiter
-               from flask_limiter.util import get_remote_address
-               
-               limiter = Limiter(
-                   app,
-                   key_func=get_remote_address,
-                   default_limits=["200 per day", "50 per hour"]
-               )
-               \`\`\`
-            
-            3. **Secure Headers**
-               \`\`\`python
-               from flask_talisman import Talisman
-               Talisman(app, force_https=True)
-               \`\`\`
-            
-            ### 🔧 Security Hardening Checklist
-            
-            - [ ] Input validation and sanitization
-            - [ ] Output encoding/escaping
-            - [ ] Error handling without information disclosure  
-            - [ ] Rate limiting implementation
-            - [ ] Security headers configuration
-            - [ ] Dependency security scanning
-            - [ ] Secrets management
-            - [ ] Logging and monitoring
-            - [ ] HTTPS enforcement
-            - [ ] Session security
-            
-            ### 📋 Next Steps
-            
-            1. **Immediate Actions** (Critical issues)
-               - Fix input validation vulnerabilities
-               - Implement proper error handling
-               - Add security headers
-            
-            2. **Short Term** (High priority)
-               - Add rate limiting
-               - Implement CSP
-               - Dependency audit
-            
-            3. **Long Term** (Medium/Low priority)
-               - Security monitoring
-               - Penetration testing
-               - Security training
-            
-            ### 🛡️ Prevention Strategies
-            
-            - **Code Reviews:** Always review security implications
-            - **Automated Scanning:** Regular security scans in CI/CD
-            - **Dependency Updates:** Keep dependencies current
-            - **Security Testing:** Include security test cases
-            - **Documentation:** Document security decisions
-            
-            ---
-            *Security analysis performed by AI Assistant. Consider professional security audit for production systems.*`;
-            
-            // Create security issue if critical vulnerabilities found
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'security'
-            });
-            
-            if (issues.length === 0) {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: '🔒 Security Analysis Report - Action Required',
-                body: securityReport,
-                labels: ['security', 'high-priority', 'bug']
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issues[0].number,
-                body: '## 🔄 Updated Security Analysis\n\n' + securityReport
-              });
-            }
+            Focus on practical, actionable security improvements with specific file and line references where possible.

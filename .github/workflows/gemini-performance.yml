@@ -1,4 +1,4 @@
-name: '⚡ Performance Optimizer'
+name: 'Performance Optimizer'
 
 on:
   pull_request:
@@ -25,252 +25,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: AI Performance Analysis
-        uses: google-github-actions/run-gemini-cli@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: google-github-actions/run-gemini-cli@v1
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           prompt: |
-            You are a performance optimization expert analyzing code for efficiency improvements.
+            Analyze this codebase for performance optimization opportunities. Focus on:
             
-            ## Performance Analysis Areas:
-            1. **Algorithm Efficiency** - Big O complexity analysis
-            2. **Memory Usage** - Memory leaks and optimization  
-            3. **Database Queries** - Query optimization and caching
-            4. **Network Calls** - API efficiency and batching
-            5. **Frontend Performance** - Loading times and rendering
-            6. **Caching Strategies** - Implementation opportunities
-            7. **Resource Management** - CPU and I/O optimization
-            8. **Scalability** - Horizontal and vertical scaling readiness
+            1. Algorithm efficiency and Big O complexity analysis
+            2. Memory usage optimization and potential memory leaks
+            3. Database queries optimization and caching opportunities
+            4. Network calls efficiency and batching
+            5. Frontend performance including loading times and rendering
+            6. Caching strategies implementation opportunities
+            7. Resource management for CPU and I/O optimization
+            8. Scalability for horizontal and vertical scaling readiness
             
-            ## Provide Analysis Including:
-            - 📊 Performance metrics and bottlenecks
-            - ⚡ Specific optimization recommendations  
-            - 🚀 Implementation examples
-            - 📈 Expected performance gains
-            - 🔧 Tools and techniques for monitoring
+            Analysis depth: ${{ github.event.inputs.analysis_depth || 'detailed' }}
             
-            Focus on practical improvements with measurable impact.
-
-      - name: Generate Performance Report
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const performanceReport = `## ⚡ AI Performance Analysis Report
+            Provide:
+            - Performance metrics and bottleneck identification
+            - Specific optimization recommendations with code examples
+            - Implementation examples for improvements
+            - Expected performance gains from each optimization
+            - Tools and techniques for performance monitoring
+            - Performance testing strategies
             
-            ### 📊 Performance Overview
-            | Category | Current Score | Target Score | Improvement Potential |
-            |----------|---------------|--------------|---------------------|
-            | ⚡ Response Time | 6/10 | 9/10 | 🚀 High |
-            | 💾 Memory Usage | 7/10 | 8/10 | 📈 Medium |
-            | 🔄 Throughput | 5/10 | 9/10 | 🚀 High |
-            | 📊 Scalability | 6/10 | 8/10 | 📈 Medium |
-            | 🎯 Resource Efficiency | 7/10 | 9/10 | 🚀 High |
-            
-            ### 🚀 High Impact Optimizations
-            
-            #### 1. Implement Caching for Font Rendering
-            **Current Issue:** Font rendering happens on every request
-            **Impact:** 70% response time reduction
-            
-            \`\`\`python
-            from flask_caching import Cache
-            import hashlib
-            
-            cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-            
-            @cache.memoize(timeout=300)  # 5-minute cache
-            def generate_ascii_art(text, font):
-                cache_key = hashlib.md5(f"{text}:{font}".encode()).hexdigest()
-                try:
-                    return pyfiglet.figlet_format(text, font=font)
-                except Exception as e:
-                    return f"Error: {str(e)}"
-            \`\`\`
-            
-            #### 2. Optimize Static Asset Loading
-            **Current Issue:** No compression or minification
-            **Impact:** 40% faster page loads
-            
-            \`\`\`html
-            <!-- Add to templates/index.html -->
-            <link rel="preload" href="/static/style.css" as="style">
-            <link rel="preload" href="/static/app.js" as="script">
-            \`\`\`
-            
-            #### 3. Add Response Compression
-            **Impact:** 60% bandwidth reduction
-            
-            \`\`\`python
-            from flask_compress import Compress
-            
-            # Add to app.py
-            Compress(app)
-            app.config['COMPRESS_MIMETYPES'] = [
-                'text/html', 'text/css', 'text/xml',
-                'application/json', 'application/javascript'
-            ]
-            \`\`\`
-            
-            ### 📈 Performance Optimization Roadmap
-            
-            #### Phase 1: Quick Wins (1-2 hours)
-            - [ ] Enable response compression
-            - [ ] Add basic caching headers
-            - [ ] Optimize static file delivery
-            - [ ] Implement connection pooling
-            
-            #### Phase 2: Medium Impact (4-8 hours)  
-            - [ ] Implement Redis caching
-            - [ ] Add lazy loading for fonts
-            - [ ] Optimize database queries
-            - [ ] Add CDN for static assets
-            
-            #### Phase 3: High Impact (1-2 days)
-            - [ ] Implement async processing
-            - [ ] Add horizontal scaling support
-            - [ ] Optimize memory usage
-            - [ ] Add performance monitoring
-            
-            ### 🔧 Implementation Examples
-            
-            #### Async Font Processing
-            \`\`\`python
-            import asyncio
-            from concurrent.futures import ThreadPoolExecutor
-            
-            executor = ThreadPoolExecutor(max_workers=4)
-            
-            async def async_generate_art(text, font):
-                loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(
-                    executor, pyfiglet.figlet_format, text, font
-                )
-            \`\`\`
-            
-            #### Memory-Efficient Font Loading
-            \`\`\`python
-            # Lazy load fonts to reduce startup time
-            _font_cache = {}
-            
-            def get_font(font_name):
-                if font_name not in _font_cache:
-                    try:
-                        _font_cache[font_name] = pyfiglet.FigletFont(font_name)
-                    except:
-                        _font_cache[font_name] = None
-                return _font_cache[font_name]
-            \`\`\`
-            
-            ### 📊 Performance Monitoring Setup
-            
-            #### Application Metrics
-            \`\`\`python
-            from flask import g
-            import time
-            
-            @app.before_request
-            def before_request():
-                g.start_time = time.time()
-            
-            @app.after_request
-            def after_request(response):
-                duration = time.time() - g.start_time
-                app.logger.info(f"Request took {duration:.3f}s")
-                response.headers['X-Response-Time'] = f"{duration:.3f}s"
-                return response
-            \`\`\`
-            
-            #### Performance Testing Script
-            \`\`\`python
-            # performance_test.py
-            import requests
-            import time
-            import statistics
-            
-            def performance_test(url, num_requests=100):
-                times = []
-                for _ in range(num_requests):
-                    start = time.time()
-                    response = requests.post(url, data={'text': 'Hello', 'font': 'standard'})
-                    times.append(time.time() - start)
-                
-                return {
-                    'avg': statistics.mean(times),
-                    'median': statistics.median(times),
-                    'p95': sorted(times)[int(len(times) * 0.95)]
-                }
-            \`\`\`
-            
-            ### 🎯 Expected Results
-            
-            **Before Optimization:**
-            - Response Time: ~500ms
-            - Memory Usage: ~50MB
-            - Concurrent Users: ~10
-            
-            **After Optimization:**
-            - Response Time: ~150ms (70% improvement)
-            - Memory Usage: ~30MB (40% reduction)  
-            - Concurrent Users: ~50 (5x improvement)
-            
-            ### 🔍 Monitoring and Alerts
-            
-            1. **Response Time Monitoring**
-               - Alert if avg response > 300ms
-               - Dashboard with P95/P99 metrics
-            
-            2. **Memory Usage Tracking**
-               - Alert if memory > 100MB
-               - Memory leak detection
-            
-            3. **Error Rate Monitoring**
-               - Alert if error rate > 1%
-               - Track error types and patterns
-            
-            ### 📋 Performance Best Practices
-            
-            - **Load Testing:** Regular performance testing
-            - **Profiling:** Profile code before optimizing
-            - **Monitoring:** Continuous performance monitoring
-            - **Caching:** Strategic caching implementation
-            - **Scaling:** Design for horizontal scaling
-            - **Optimization:** Measure twice, optimize once
-            
-            ---
-            *Performance analysis by AI Assistant. Validate improvements with real performance testing.*`;
-            
-            // Post to PR or create issue
-            if (context.eventName === 'pull_request') {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: performanceReport
-              });
-            } else {
-              // Check if performance issue already exists
-              const { data: issues } = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                labels: 'performance'
-              });
-              
-              if (issues.length === 0) {
-                await github.rest.issues.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: '⚡ Performance Optimization Recommendations',
-                  body: performanceReport,
-                  labels: ['performance', 'enhancement', 'optimization']
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issues[0].number,
-                  body: '## 🔄 Updated Performance Analysis\n\n' + performanceReport
-                });
-              }
-            }
+            Focus on practical improvements with measurable impact and provide specific file and line references where applicable.
