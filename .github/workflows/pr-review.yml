@@ -12,11 +12,24 @@ jobs:
   gemini-review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Configure Gemini Settings from file'
+        run: |
+          mkdir -p /home/runner/.gemini/
+          if [ -f ".gemini/settings.json" ]; then
+            cp .gemini/settings.json /home/runner/.gemini/settings.json
+            echo "Gemini settings configured."
+          else
+            echo "ERROR: .gemini/settings.json not found!"
+            exit 1
+          fi
+        shell: bash
+
       - name: 'Run Gemini pull request review'
         uses: 'google-github-actions/run-gemini-cli@v0'
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
           REPOSITORY: '${{ github.repository }}'

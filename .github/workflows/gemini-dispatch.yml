@@ -31,6 +31,18 @@ jobs:
       - name: 'Checkout repository'
         uses: 'actions/checkout@v4'
 
+      - name: 'Configure Gemini Settings from file'
+        run: |
+          mkdir -p /home/runner/.gemini/
+          if [ -f ".gemini/settings.json" ]; then
+            cp .gemini/settings.json /home/runner/.gemini/settings.json
+            echo "Gemini settings configured."
+          else
+            echo "ERROR: .gemini/settings.json not found!"
+            exit 1
+          fi
+        shell: bash
+
       - name: 'Fetch Issue Details (if applicable)'
         if: github.event.inputs.item_type == 'issue'
         id: get_issue
@@ -48,7 +60,6 @@ jobs:
       - name: 'Run Gemini Analysis'
         uses: 'google-github-actions/run-gemini-cli@v0'
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           PULL_REQUEST_NUMBER: "${{ github.event.inputs.item_type == 'pull_request' && github.event.inputs.item_number || '' }}"
           ISSUE_NUMBER: "${{ github.event.inputs.item_type == 'issue' && github.event.inputs.item_number || '' }}"
