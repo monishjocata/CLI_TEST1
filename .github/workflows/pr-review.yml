@@ -1,11 +1,7 @@
 name: 'Pull Request Review'
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize]
 
 permissions:         # 👈 must be top-level for reusable workflows
