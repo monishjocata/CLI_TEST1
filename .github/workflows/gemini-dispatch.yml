@@ -25,6 +25,8 @@ jobs:
       - name: Issue Analysis and Labeling
         if: github.event_name == 'issues'
         uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }
         with:
           prompt: |
             Analyze this GitHub issue and provide:
@@ -41,6 +43,8 @@ jobs:
       - name: Pull Request Review
         if: github.event_name == 'pull_request'
         uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }
         with:
           prompt: |
             Review this pull request focusing on:
@@ -57,6 +61,8 @@ jobs:
       - name: Respond to Mentions
         if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gemini-cli')
         uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }
         with:
           prompt: |
             Respond to this user request in the context of the repository:
