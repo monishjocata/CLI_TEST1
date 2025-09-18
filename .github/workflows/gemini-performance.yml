@@ -27,7 +27,7 @@ jobs:
       - name: AI Performance Analysis
         uses: google-github-actions/run-gemini-cli@v0
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           prompt: |
             Analyze this codebase for performance optimization opportunities. Focus on:
